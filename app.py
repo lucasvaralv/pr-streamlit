@@ -33,7 +33,6 @@ if isinstance(json_url, list):
 if json_url:
     data = load_json_from_url(json_url)
 else:
-    # ---- File uploader fallback ----
     uploaded_file = st.file_uploader("📁 Upload JSON file with corrections", type="json")
     if uploaded_file is not None:
         data = json.load(uploaded_file)
@@ -53,12 +52,7 @@ selected_keywords = st.multiselect(
     all_keywords,
     default=[]
 )
-if selected_keywords:
-    filtered_data = [entry for entry in data if any(
-        k.strip() in selected_keywords for k in entry['keywords'].split(',')
-    )]
-else:
-    filtered_data = data
+filtered_data = [entry for entry in data if any(k.strip() in selected_keywords for k in entry['keywords'].split(','))] if selected_keywords else data
 
 if not filtered_data:
     st.warning("No entries match your filter.")
@@ -95,7 +89,7 @@ if "entry_idx" not in st.session_state:
 if "last_file" not in st.session_state:
     st.session_state.last_file = selected_file
 
-# Reset index if switching file
+# Reset entry index to 0 when switching files
 if st.session_state.last_file != selected_file:
     st.session_state.entry_idx = 0
     st.session_state.last_file = selected_file
@@ -110,7 +104,7 @@ with col3:
         st.session_state.entry_idx += 1
 with col2:
     options = [f"Entry {i+1}" for i in range(num_entries)]
-    # Use key instead of index
+    # Use a unique key per file to avoid index issues
     selected_option = st.selectbox(
         "📑 Select correction entry",
         options,
@@ -131,7 +125,7 @@ td.diff_add {background-color: #004d00; color: #00ff00;}
 td.diff_sub {background-color: #660000; color: #ff6666;}
 td.diff_chg {background-color: #664d00; color: #ffcc00;}
 span.diff_add {background-color: #00ff00; color: black; font-weight: bold;}
-span.diff_sub {background-background: #ff6666; color: black; font-weight: bold;}
+span.diff_sub {background-color: #ff6666; color: black; font-weight: bold;}
 span.diff_chg {background-color: #ffcc00; color: black; font-weight: bold;}
 </style>
 """
