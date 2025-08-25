@@ -74,12 +74,15 @@ for idx, entry in enumerate(filtered_data):
 filenames = list(files_dict.keys())
 selected_file = st.selectbox("📂 Select a file", filenames)
 
-# ---- Step 2: select entry index with dropdown + navigation ----
 entries = files_dict[selected_file]
 num_entries = len(entries)
 
 # Initialize session state
 if "entry_idx" not in st.session_state:
+    st.session_state.entry_idx = 0
+
+# Reset index if it's out of bounds for the new file
+if st.session_state.entry_idx >= num_entries:
     st.session_state.entry_idx = 0
 
 # Layout: prev button | dropdown | next button
@@ -92,11 +95,16 @@ with col3:
         st.session_state.entry_idx += 1
 with col2:
     options = [f"Entry {i+1}" for i in range(num_entries)]
-    selected_option = st.selectbox("📑 Select correction entry", options, index=st.session_state.entry_idx)
+    selected_option = st.selectbox(
+        "📑 Select correction entry",
+        options,
+        index=st.session_state.entry_idx
+    )
     st.session_state.entry_idx = options.index(selected_option)
 
 # Retrieve the currently selected entry
 entry = entries[st.session_state.entry_idx][1]
+
 
 # ---- Custom CSS for diff view ----
 custom_css = """
