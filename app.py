@@ -6,7 +6,7 @@ from collections import defaultdict
 
 # ---- PAGE CONFIG ----
 st.set_page_config(
-    page_title="Text Correction Viewer",
+    page_title="PR Correction Viewer",
     page_icon="📄",
     layout="wide",
     initial_sidebar_state="expanded"
