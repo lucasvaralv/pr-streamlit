@@ -61,14 +61,28 @@ if selected_keywords:
 else:
     filtered_data = data
 
+
 if not filtered_data:
     st.warning("No entries match your filter.")
     st.stop()
 
-# ---- Organize entries by filename ----
+# ---- Define priority order ----
+priority_order = ["grammar", "spelling", "capitalization", "punctuation"]
+
+def get_priority(entry):
+    entry_keywords = [k.strip().lower() for k in entry['keywords'].split(',')]
+    for i, kw in enumerate(priority_order):
+        if kw in entry_keywords:
+            return i
+    return len(priority_order)
+
+# ---- Organize entries by filename and sort inside each file ----
 files_dict = defaultdict(list)
 for idx, entry in enumerate(filtered_data):
     files_dict[entry['filename']].append((idx, entry))
+
+for filename in files_dict:
+    files_dict[filename].sort(key=lambda x: get_priority(x[1]))
 
 # ---- Step 1: select a file ----
 filenames = list(files_dict.keys())
