@@ -3,7 +3,6 @@ import streamlit as st
 import difflib
 import requests
 from collections import defaultdict
-from urllib.parse import urlparse, parse_qs
 
 # ---- PAGE CONFIG ----
 st.set_page_config(
@@ -61,7 +60,6 @@ if selected_keywords:
 else:
     filtered_data = data
 
-
 if not filtered_data:
     st.warning("No entries match your filter.")
     st.stop()
@@ -91,15 +89,12 @@ selected_file = st.selectbox("📂 Select a file", filenames)
 entries = files_dict[selected_file]
 num_entries = len(entries)
 
-# Initialize session state
+# ---- Initialize and clamp session state ----
 if "entry_idx" not in st.session_state:
     st.session_state.entry_idx = 0
+st.session_state.entry_idx = min(st.session_state.entry_idx, num_entries - 1)
 
-# Reset index if it's out of bounds for the new file
-if st.session_state.entry_idx >= num_entries:
-    st.session_state.entry_idx = 0
-
-# Layout: prev button | dropdown | next button
+# ---- Layout: prev button | dropdown | next button ----
 col1, col2, col3 = st.columns([1, 3, 1])
 with col1:
     if st.button("⬅️ Prev") and st.session_state.entry_idx > 0:
@@ -109,16 +104,16 @@ with col3:
         st.session_state.entry_idx += 1
 with col2:
     options = [f"Entry {i+1}" for i in range(num_entries)]
+    safe_index = min(st.session_state.entry_idx, len(options) - 1)
     selected_option = st.selectbox(
         "📑 Select correction entry",
         options,
-        index=st.session_state.entry_idx
+        index=safe_index
     )
     st.session_state.entry_idx = options.index(selected_option)
 
-# Retrieve the currently selected entry
+# ---- Retrieve the currently selected entry ----
 entry = entries[st.session_state.entry_idx][1]
-
 
 # ---- Custom CSS for diff view ----
 custom_css = """
@@ -130,7 +125,7 @@ td.diff_add {background-color: #004d00; color: #00ff00;}
 td.diff_sub {background-color: #660000; color: #ff6666;}
 td.diff_chg {background-color: #664d00; color: #ffcc00;}
 span.diff_add {background-color: #00ff00; color: black; font-weight: bold;}
-span.diff_sub {background-color: #ff6666; color: black; font-weight: bold;}
+span.diff_sub {background-background: #ff6666; color: black; font-weight: bold;}
 span.diff_chg {background-color: #ffcc00; color: black; font-weight: bold;}
 </style>
 """
@@ -148,7 +143,7 @@ with col2:
     st.markdown("### Corrected")
     st.code(entry['correction'], language="markdown")
 
-# Diff view
+# ---- Diff view ----
 st.markdown("### 🔍 Diff View")
 diff_html = difflib.HtmlDiff(wrapcolumn=80).make_table(
     entry['original_txt'].splitlines(),
