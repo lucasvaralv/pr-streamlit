@@ -89,14 +89,16 @@ selected_file = st.selectbox("📂 Select a file", filenames)
 entries = files_dict[selected_file]
 num_entries = len(entries)
 
-# ---- Initialize session state for entry index ----
+# ---- Initialize session state ----
 if "entry_idx" not in st.session_state:
     st.session_state.entry_idx = 0
+if "last_file" not in st.session_state:
+    st.session_state.last_file = selected_file
 
-# ---- Reset entry index when switching files ----
-if "last_file" not in st.session_state or st.session_state.last_file != selected_file:
+# Reset index if switching file
+if st.session_state.last_file != selected_file:
     st.session_state.entry_idx = 0
-st.session_state.last_file = selected_file
+    st.session_state.last_file = selected_file
 
 # ---- Layout: prev button | dropdown | next button ----
 col1, col2, col3 = st.columns([1, 3, 1])
@@ -108,13 +110,13 @@ with col3:
         st.session_state.entry_idx += 1
 with col2:
     options = [f"Entry {i+1}" for i in range(num_entries)]
+    # Use key instead of index
     selected_option = st.selectbox(
         "📑 Select correction entry",
         options,
-        index=st.session_state.entry_idx
+        key=f"select_entry_{selected_file}"
     )
     st.session_state.entry_idx = options.index(selected_option)
-
 
 # ---- Retrieve the currently selected entry ----
 entry = entries[st.session_state.entry_idx][1]
