@@ -46,13 +46,35 @@ if uploaded_file is not None:
     filenames = list(files_dict.keys())
     selected_file = st.selectbox("📂 Select a file", filenames)
 
-    # ---- Step 2: select entry index ----
+    # ---- Step 2: select entry index with dropdown + navigation ----
     entries = files_dict[selected_file]
-    options = [f"Entry {i+1}" for i in range(len(entries))]
-    selected_entry_idx = st.selectbox("📑 Select correction entry", options, index=0)
+    num_entries = len(entries)
 
-    # Retrieve the chosen entry
-    entry = entries[options.index(selected_entry_idx)][1]
+    # Initialize session state
+    if "entry_idx" not in st.session_state:
+        st.session_state.entry_idx = 0
+
+    # Layout: prev button | dropdown | next button
+    col1, col2, col3 = st.columns([1, 3, 1])
+
+    with col1:
+        if st.button("⬅️ Prev") and st.session_state.entry_idx > 0:
+            st.session_state.entry_idx -= 1
+
+    with col3:
+        if st.button("Next ➡️") and st.session_state.entry_idx < num_entries - 1:
+            st.session_state.entry_idx += 1
+
+    with col2:
+        options = [f"Entry {i+1}" for i in range(num_entries)]
+        selected_option = st.selectbox("📑 Select correction entry", options, index=st.session_state.entry_idx)
+        # Sync dropdown selection with session_state
+        st.session_state.entry_idx = options.index(selected_option)
+
+    # Retrieve the currently selected entry
+    entry = entries[st.session_state.entry_idx][1]
+
+
 
     # ---- Custom CSS for diff view ----
     custom_css = """
