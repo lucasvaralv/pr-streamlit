@@ -88,14 +88,8 @@ for filename in files_dict:
 filenames = list(files_dict.keys())
 selected_file = st.selectbox("📂 Select a file", filenames)
 
-# If the selected file changed, reset entry index
-if "last_file" not in st.session_state or st.session_state.last_file != selected_file:
-    st.session_state.entry_idx = 0
-    st.session_state.last_file = selected_file  # store current file
-
 entries = files_dict[selected_file]
 num_entries = len(entries)
-
 
 # Initialize session state
 if "entry_idx" not in st.session_state:
