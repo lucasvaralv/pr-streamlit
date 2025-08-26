@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.title("Text Correction Viewer")
+st.title("PR Correction Viewer")
 
 # ---- Helper function to load JSON ----
 def load_json_from_url(url):
@@ -103,14 +103,15 @@ with col3:
     if st.button("Next ➡️") and st.session_state.entry_idx < num_entries - 1:
         st.session_state.entry_idx += 1
 with col2:
+    # Bind selectbox directly to the session state index
     options = [f"Entry {i+1}" for i in range(num_entries)]
-    # Use a unique key per file to avoid index issues
-    selected_option = st.selectbox(
+    st.session_state.entry_idx = st.selectbox(
         "📑 Select correction entry",
-        options,
-        key=f"select_entry_{selected_file}"
+        range(num_entries),
+        format_func=lambda i: options[i],
+        key=f"select_entry_{selected_file}",
+        index=st.session_state.entry_idx
     )
-    st.session_state.entry_idx = options.index(selected_option)
 
 # ---- Retrieve the currently selected entry ----
 entry = entries[st.session_state.entry_idx][1]
