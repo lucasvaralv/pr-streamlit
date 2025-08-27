@@ -3,6 +3,7 @@ import streamlit as st
 import difflib
 import requests
 from collections import defaultdict
+from urllib.parse import unquote
 
 # ---- PAGE CONFIG ----
 st.set_page_config(
@@ -25,22 +26,52 @@ def load_json_from_url(url):
         return None
 
 # ---- Check query param for gist ----
-query_params = st.query_params
-json_url = query_params.get("file")
-if isinstance(json_url, list):
-    json_url = json_url[0]
+# query_params = st.query_params
+# json_url = query_params.get("file")
+# if isinstance(json_url, list):
+#     json_url = json_url[0]
     
-if json_url:
-    data = load_json_from_url(json_url)
+# if json_url:
+#     data = load_json_from_url(json_url)
+# else:
+#     uploaded_file = st.file_uploader("📁 Upload JSON file with corrections", type="json")
+#     if uploaded_file is not None:
+#         data = json.load(uploaded_file)
+#     else:
+#         data = None
+
+# if not data:
+#     st.info("Please upload a JSON file or use a link with ?file=<gist_raw_url> to view text corrections.")
+#     st.stop()
+
+# ---- Check query param for s3 ----
+s3_key = st.query_params.get("key")
+if isinstance(s3_key, list):
+    s3_key = s3_key[0]
+
+data = None
+if s3_key:
+    s3_key = unquote(s3_key)
+    # Backend redirect endpoint
+    BACKEND_BASE_URL = st.secrets["BACKEND_BASE_URL"]
+    json_url = f"{BACKEND_BASE_URL}/get-corrections/{s3_key}"
+    try:
+        response = requests.get(json_url)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        st.error(f"Failed to load JSON from backend: {e}")
 else:
     uploaded_file = st.file_uploader("📁 Upload JSON file with corrections", type="json")
-    if uploaded_file is not None:
-        data = json.load(uploaded_file)
-    else:
-        data = None
+    if uploaded_file:
+        try:
+            data = json.load(uploaded_file)
+        except Exception as e:
+            st.error(f"Error reading uploaded file: {e}")
 
+# Guard against None
 if not data:
-    st.info("Please upload a JSON file or use a link with ?file=<gist_raw_url> to view text corrections.")
+    st.warning("No data loaded. Please provide a key in the URL or upload a JSON file.")
     st.stop()
 
 # ---- Collect keywords ----
