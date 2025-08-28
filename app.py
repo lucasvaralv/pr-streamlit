@@ -25,24 +25,6 @@ def load_json_from_url(url):
         st.error(f"Failed to load JSON from URL: {e}")
         return None
 
-# ---- Check query param for gist ----
-# query_params = st.query_params
-# json_url = query_params.get("file")
-# if isinstance(json_url, list):
-#     json_url = json_url[0]
-    
-# if json_url:
-#     data = load_json_from_url(json_url)
-# else:
-#     uploaded_file = st.file_uploader("📁 Upload JSON file with corrections", type="json")
-#     if uploaded_file is not None:
-#         data = json.load(uploaded_file)
-#     else:
-#         data = None
-
-# if not data:
-#     st.info("Please upload a JSON file or use a link with ?file=<gist_raw_url> to view text corrections.")
-#     st.stop()
 
 # ---- Check query param for s3 ----
 s3_key = st.query_params.get("key")
@@ -73,23 +55,11 @@ else:
 if not data:
     st.warning("No data loaded. Please provide a key in the URL or upload a JSON file.")
     st.stop()
+from collections import defaultdict
+import difflib
+import streamlit as st
 
-# ---- Collect keywords ----
-all_keywords = sorted(set(k.strip() for entry in data for k in entry['keywords'].split(',')))
-
-# ---- Keyword filter ----
-selected_keywords = st.multiselect(
-    "🔎 Filter by keywords (select None for all)",
-    all_keywords,
-    default=[]
-)
-filtered_data = [entry for entry in data if any(k.strip() in selected_keywords for k in entry['keywords'].split(','))] if selected_keywords else data
-
-if not filtered_data:
-    st.warning("No entries match your filter.")
-    st.stop()
-
-# ---- Define priority order ----
+# ---- Organize entries by filename and sort inside each file ----
 priority_order = ["grammar", "spelling", "capitalization", "punctuation"]
 
 def get_priority(entry):
@@ -99,52 +69,58 @@ def get_priority(entry):
             return i
     return len(priority_order)
 
-# ---- Organize entries by filename and sort inside each file ----
 files_dict = defaultdict(list)
-for idx, entry in enumerate(filtered_data):
+for idx, entry in enumerate(data):
     files_dict[entry['filename']].append((idx, entry))
 
 for filename in files_dict:
     files_dict[filename].sort(key=lambda x: get_priority(x[1]))
 
-# ---- Step 1: select a file ----
 filenames = list(files_dict.keys())
-selected_file = st.selectbox("📂 Select a file", filenames)
-
-entries = files_dict[selected_file]
-num_entries = len(entries)
 
 # ---- Initialize session state ----
 if "entry_idx" not in st.session_state:
     st.session_state.entry_idx = 0
-if "last_file" not in st.session_state:
-    st.session_state.last_file = selected_file
+if "selected_file" not in st.session_state:
+    st.session_state.selected_file = filenames[0]
 
-# Reset entry index to 0 when switching files
-if st.session_state.last_file != selected_file:
-    st.session_state.entry_idx = 0
-    st.session_state.last_file = selected_file
-
-# ---- Layout: prev button | dropdown | next button ----
-col1, col2, col3 = st.columns([1, 3, 1])
-with col1:
-    if st.button("⬅️ Prev") and st.session_state.entry_idx > 0:
-        st.session_state.entry_idx -= 1
-with col3:
-    if st.button("Next ➡️") and st.session_state.entry_idx < num_entries - 1:
-        st.session_state.entry_idx += 1
-with col2:
-    # Bind selectbox directly to the session state index
-    options = [f"Entry {i+1}" for i in range(num_entries)]
-    st.session_state.entry_idx = st.selectbox(
-        "📑 Select correction entry",
-        range(num_entries),
-        format_func=lambda i: options[i],
-        key=f"select_entry_{selected_file}",
-        index=st.session_state.entry_idx
+# ---- File selector (reusable) ----
+def file_selector(location="top"):
+    st.session_state.selected_file = st.selectbox(
+        "📂 Select a file",
+        filenames,
+        index=filenames.index(st.session_state.selected_file),
+        key=f"file_select_{location}"
     )
 
+# ---- Navigation block (reusable) ----
+def navigation_controls(entries, location="top"):
+    num_entries = len(entries)
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col1:
+        if st.button("⬅️ Prev", key=f"prev_{location}") and st.session_state.entry_idx > 0:
+            st.session_state.entry_idx -= 1
+    with col3:
+        if st.button("Next ➡️", key=f"next_{location}") and st.session_state.entry_idx < num_entries - 1:
+            st.session_state.entry_idx += 1
+    with col2:
+        options = [f"Entry {i+1}" for i in range(num_entries)]
+        st.session_state.entry_idx = st.selectbox(
+            "📑 Select correction entry",
+            range(num_entries),
+            format_func=lambda i: options[i],
+            key=f"select_entry_{location}_{st.session_state.selected_file}",
+            index=st.session_state.entry_idx
+        )
+
+# ---- First set of file selector + controls ----
+file_selector("top")
+entries = files_dict[st.session_state.selected_file]
+navigation_controls(entries, "top")
+
 # ---- Retrieve the currently selected entry ----
+if st.session_state.entry_idx >= len(entries):
+    st.session_state.entry_idx = 0
 entry = entries[st.session_state.entry_idx][1]
 
 # ---- Custom CSS for diff view ----
@@ -186,3 +162,9 @@ diff_html = difflib.HtmlDiff(wrapcolumn=80).make_table(
     numlines=3
 )
 st.components.v1.html(custom_css + diff_html, height=400, scrolling=True)
+
+# ---- Second set of file selector + controls ----
+file_selector("bottom")
+entries = files_dict[st.session_state.selected_file]
+navigation_controls(entries, "bottom")
+
