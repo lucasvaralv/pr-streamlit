@@ -143,13 +143,6 @@ st.markdown("### ℹ️ Explanation and Keywords")
 st.markdown(f"**Keywords:** {entry['keywords']}")
 st.markdown(f"**Explanation:** {entry['explanation']}")
 
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown("### Original")
-    st.code(entry['original_txt'], language="markdown")
-with col2:
-    st.markdown("### Corrected")
-    st.code(entry['correction'], language="markdown")
 
 # ---- Diff view ----
 st.markdown("### 🔍 Diff View")
@@ -163,8 +156,15 @@ diff_html = difflib.HtmlDiff(wrapcolumn=80).make_table(
 )
 st.components.v1.html(custom_css + diff_html, height=400, scrolling=True)
 
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("### Original")
+    st.code(entry['original_txt'], language="markdown")
+with col2:
+    st.markdown("### Corrected")
+    st.code(entry['correction'], language="markdown")
+
 # ---- Second set of file selector + controls ----
 file_selector("bottom")
 entries = files_dict[st.session_state.selected_file]
 navigation_controls(entries, "bottom")
-
