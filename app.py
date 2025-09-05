@@ -73,6 +73,21 @@ for entry in data:
 for filename in files_dict:
     files_dict[filename].sort(key=lambda e: get_priority(e))
 
+filenames = list(files_dict.keys())
+
+# ---- Session state for selected file ----
+if "selected_file" not in st.session_state:
+    st.session_state.selected_file = filenames[0]
+
+# ---- File selector (reusable) ----
+def file_selector(location="top"):
+    st.session_state.selected_file = st.selectbox(
+        "📂 Select a file",
+        filenames,
+        index=filenames.index(st.session_state.selected_file),
+        key=f"file_select_{location}"
+    )
+
 # ---- Custom CSS for diff view ----
 custom_css = """
 <style>
@@ -88,31 +103,36 @@ span.diff_chg {background-color: #ffcc00; color: black; font-weight: bold;}
 </style>
 """
 
-# ---- Show all files and their corrections ----
-st.header("📄 Corrections by File")
+# ---- Top file selector ----
+file_selector("top")
 
-for filename, entries in files_dict.items():
-    st.markdown("---")  # horizontal divider
-    st.subheader(f"📂 File: `{filename}`")
+# ---- Show selected file and its corrections ----
+selected_file = st.session_state.selected_file
+entries = files_dict[selected_file]
 
-    # enumerate AFTER sorting to ensure numbering is correct
-    for display_idx, entry in enumerate(entries, start=1):
-        st.markdown(f"#### ✨ Correction {display_idx}")
+st.header(f"📂 File: `{selected_file}`")
 
-        # Explanation & keywords
-        st.markdown("**Keywords:** " + entry['keywords'])
-        st.markdown("**Explanation:** " + entry['explanation'])
+for display_idx, entry in enumerate(entries, start=1):
+    st.markdown(f"#### ✨ Correction {display_idx}")
 
-        # Diff view
-        diff_html = difflib.HtmlDiff(wrapcolumn=80).make_table(
-            entry['original_txt'].splitlines(),
-            entry['correction'].splitlines(),
-            fromdesc='Original',
-            todesc='Corrected',
-            context=True,
-            numlines=3
-        )
-        st.components.v1.html(custom_css + diff_html, height=250, scrolling=True)
+    # Explanation & keywords
+    st.markdown("**Keywords:** " + entry['keywords'])
+    st.markdown("**Explanation:** " + entry['explanation'])
+
+    # Diff view
+    diff_html = difflib.HtmlDiff(wrapcolumn=80).make_table(
+        entry['original_txt'].splitlines(),
+        entry['correction'].splitlines(),
+        fromdesc='Original',
+        todesc='Corrected',
+        context=True,
+        numlines=3
+    )
+    st.components.v1.html(custom_css + diff_html, height=250, scrolling=True)
+
+# ---- Bottom file selector ----
+file_selector("bottom")
+
 
 
         # # Side-by-side original vs corrected
