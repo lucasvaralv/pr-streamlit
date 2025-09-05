@@ -55,9 +55,6 @@ else:
 if not data:
     st.warning("No data loaded. Please provide a key in the URL or upload a JSON file.")
     st.stop()
-from collections import defaultdict
-import difflib
-import streamlit as st
 
 # ---- Organize entries by filename and sort inside each file ----
 priority_order = ["grammar", "spelling", "capitalization", "punctuation"]
@@ -70,58 +67,11 @@ def get_priority(entry):
     return len(priority_order)
 
 files_dict = defaultdict(list)
-for idx, entry in enumerate(data):
-    files_dict[entry['filename']].append((idx, entry))
+for entry in data:
+    files_dict[entry['filename']].append(entry)
 
 for filename in files_dict:
-    files_dict[filename].sort(key=lambda x: get_priority(x[1]))
-
-filenames = list(files_dict.keys())
-
-# ---- Initialize session state ----
-if "entry_idx" not in st.session_state:
-    st.session_state.entry_idx = 0
-if "selected_file" not in st.session_state:
-    st.session_state.selected_file = filenames[0]
-
-# ---- File selector (reusable) ----
-def file_selector(location="top"):
-    st.session_state.selected_file = st.selectbox(
-        "📂 Select a file",
-        filenames,
-        index=filenames.index(st.session_state.selected_file),
-        key=f"file_select_{location}"
-    )
-
-# ---- Navigation block (reusable) ----
-def navigation_controls(entries, location="top"):
-    num_entries = len(entries)
-    col1, col2, col3 = st.columns([1, 3, 1])
-    with col1:
-        if st.button("⬅️ Prev", key=f"prev_{location}") and st.session_state.entry_idx > 0:
-            st.session_state.entry_idx -= 1
-    with col3:
-        if st.button("Next ➡️", key=f"next_{location}") and st.session_state.entry_idx < num_entries - 1:
-            st.session_state.entry_idx += 1
-    with col2:
-        options = [f"Entry {i+1}" for i in range(num_entries)]
-        st.session_state.entry_idx = st.selectbox(
-            "📑 Select correction entry",
-            range(num_entries),
-            format_func=lambda i: options[i],
-            key=f"select_entry_{location}_{st.session_state.selected_file}",
-            index=st.session_state.entry_idx
-        )
-
-# ---- First set of file selector + controls ----
-file_selector("top")
-entries = files_dict[st.session_state.selected_file]
-navigation_controls(entries, "top")
-
-# ---- Retrieve the currently selected entry ----
-if st.session_state.entry_idx >= len(entries):
-    st.session_state.entry_idx = 0
-entry = entries[st.session_state.entry_idx][1]
+    files_dict[filename].sort(key=lambda e: get_priority(e))
 
 # ---- Custom CSS for diff view ----
 custom_css = """
@@ -138,33 +88,38 @@ span.diff_chg {background-color: #ffcc00; color: black; font-weight: bold;}
 </style>
 """
 
-# ---- Render chosen entry ----
-st.markdown("### ℹ️ Explanation and Keywords")
-st.markdown(f"**Keywords:** {entry['keywords']}")
-st.markdown(f"**Explanation:** {entry['explanation']}")
+# ---- Show all files and their corrections ----
+st.header("📄 Corrections by File")
+
+for filename, entries in files_dict.items():
+    st.markdown("---")  # horizontal divider
+    st.subheader(f"📂 File: `{filename}`")
+
+    # enumerate AFTER sorting to ensure numbering is correct
+    for display_idx, entry in enumerate(entries, start=1):
+        st.markdown(f"#### ✨ Correction {display_idx}")
+
+        # Explanation & keywords
+        st.markdown("**Keywords:** " + entry['keywords'])
+        st.markdown("**Explanation:** " + entry['explanation'])
+
+        # Diff view
+        diff_html = difflib.HtmlDiff(wrapcolumn=80).make_table(
+            entry['original_txt'].splitlines(),
+            entry['correction'].splitlines(),
+            fromdesc='Original',
+            todesc='Corrected',
+            context=True,
+            numlines=3
+        )
+        st.components.v1.html(custom_css + diff_html, height=250, scrolling=True)
 
 
-# ---- Diff view ----
-st.markdown("### 🔍 Diff View")
-diff_html = difflib.HtmlDiff(wrapcolumn=80).make_table(
-    entry['original_txt'].splitlines(),
-    entry['correction'].splitlines(),
-    fromdesc='Original',
-    todesc='Corrected',
-    context=True,
-    numlines=3
-)
-st.components.v1.html(custom_css + diff_html, height=400, scrolling=True)
-
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown("### Original")
-    st.code(entry['original_txt'], language="markdown")
-with col2:
-    st.markdown("### Corrected")
-    st.code(entry['correction'], language="markdown")
-
-# ---- Second set of file selector + controls ----
-file_selector("bottom")
-entries = files_dict[st.session_state.selected_file]
-navigation_controls(entries, "bottom")
+        # # Side-by-side original vs corrected
+        # col1, col2 = st.columns(2)
+        # with col1:
+        #     st.markdown("**Original**")
+        #     st.code(entry['original_txt'], language="markdown")
+        # with col2:
+        #     st.markdown("**Corrected**")
+        #     st.code(entry['correction'], language="markdown")
