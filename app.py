@@ -130,16 +130,19 @@ for display_idx, entry in enumerate(entries, start=1):
     )
     st.components.v1.html(custom_css + diff_html, height=250, scrolling=True)
 
+    # Side-by-side original vs corrected
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Original**")
+        st.code(entry['original_txt'], language="markdown")
+    with col2:
+        st.markdown("**Corrected**")
+        st.code(entry['correction'], language="markdown")
+    
+    st.markdown("---")
 # ---- Bottom file selector ----
 file_selector("bottom")
 
 
 
-        # # Side-by-side original vs corrected
-        # col1, col2 = st.columns(2)
-        # with col1:
-        #     st.markdown("**Original**")
-        #     st.code(entry['original_txt'], language="markdown")
-        # with col2:
-        #     st.markdown("**Corrected**")
-        #     st.code(entry['correction'], language="markdown")
+
